@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Work & Projection - Study Notes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a3a5c;
+            --primary-light: #2d5a87;
+            --secondary: #c75b39;
+            --accent: #e8a87c;
+            --bg: #f5f0eb;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --text-light: #5a6c7d;
+            --border: #d4c5b5;
+            --sidebar-bg: #1a3a5c;
+            --sidebar-text: #e8e4df;
+            --hover: #c75b39;
+            --success: #4a7c59;
+            --warning: #d4a017;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 300px;
+            height: 100vh;
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            overflow-y: auto;
+            z-index: 1000;
+            padding: 25px 0;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+        }
+
+        .sidebar-header {
+            text-align: center;
+            padding: 0 20px 25px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-header h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            color: var(--accent);
+            margin-bottom: 5px;
+        }
+
+        .sidebar-header p {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 15px 0;
+        }
+
+        .nav-menu li {
+            margin: 2px 0;
+        }
+
+        .nav-menu a {
+            display: block;
+            padding: 12px 25px;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-menu a:hover,
+        .nav-menu a.active {
+            background: rgba(255,255,255,0.08);
+            border-left-color: var(--secondary);
+            color: var(--accent);
+        }
+
+        .nav-menu .topic-group {
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 15px 25px 8px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            margin-left: 300px;
+            min-height: 100vh;
+        }
+
+        /* ===== HERO / COVER ===== */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 50%, var(--secondary) 100%);
+            color: white;
+            padding: 80px 50px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+            background-size: 30px 30px;
+            animation: float 20s linear infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .hero .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .hero .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 25px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+        }
+
+        /* ===== SECTIONS ===== */
+        .section {
+            padding: 50px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid var(--secondary);
+        }
+
+        .section-number {
+            background: var(--secondary);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            color: var(--primary);
+        }
+
+        /* ===== CARDS ===== */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+        }
+
+        .card h3 {
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h3::before {
+            content: '▸';
+            color: var(--secondary);
+            font-size: 1.1rem;
+        }
+
+        .card p, .card li {
+            color: var(--text-light);
+            margin-bottom: 10px;
+        }
+
+        .card ul {
+            padding-left: 25px;
+        }
+
+        .card li {
+            margin-bottom: 8px;
+        }
+
+        /* ===== IMAGES - FIXED SIZES ===== */
+        .img-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .img-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+            border: 1px solid var(--border);
+        }
+
+        .img-card img {
+            width: 100%;
+            height: 160px;
+            object-fit: contain;
+            display: block;
+            background: #f8f6f3;
+            padding: 8px;
+        }
+
+        .img-card .caption {
+            padding: 10px 12px;
+            font-size: 0.8rem;
+            color: var(--text-light);
+            text-align: center;
+            background: #faf8f5;
+        }
+
+        /* Large images - max 500px */
+        .img-large {
+            width: 100%;
+            max-width: 500px;
+            max-height: 350px;
+            margin: 20px auto;
+            display: block;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            object-fit: contain;
+            background: #f8f6f3;
+            padding: 10px;
+        }
+
+        /* Medium images - max 350px */
+        .img-medium {
+            width: 100%;
+            max-width: 350px;
+            max-height: 250px;
+            margin: 15px auto;
+            display: block;
+            border-radius: 10px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+            object-fit: contain;
+            background: #f8f6f3;
+            padding: 8px;
+        }
+
+        /* Small images - max 250px */
+        .img-small {
+            width: 100%;
+            max-width: 250px;
+            max-height: 180px;
+            margin: 10px auto;
+            display: block;
+            border-radius: 8px;
+            object-fit: contain;
+            background: #f8f6f3;
+            padding: 6px;
+        }
+
+        /* Inline small images for side-by-side */
+        .img-inline {
+            width: 100%;
+            max-width: 220px;
+            max-height: 160px;
+            margin: 8px auto;
+            display: block;
+            border-radius: 8px;
+            object-fit: contain;
+            background: #f8f6f3;
+            padding: 5px;
+        }
+
+        /* ===== INFO BOXES ===== */
+        .info-box {
+            background: linear-gradient(135deg, #e8f4f8 0%, #f0e8f8 100%);
+            border-left: 4px solid var(--primary-light);
+            padding: 18px 22px;
+            border-radius: 0 12px 12px 0;
+            margin: 18px 0;
+        }
+
+        .info-box.warning {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe8d6 100%);
+            border-left-color: var(--secondary);
+        }
+
+        .info-box.success {
+            background: linear-gradient(135deg, #e8f5e9 0%, #dcedc8 100%);
+            border-left-color: var(--success);
+        }
+
+        .info-box h4 {
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        /* ===== COMPARISON TABLE ===== */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 18px 0;
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.06);
+        }
+
+        .comparison-table th {
+            background: var(--primary);
+            color: white;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .comparison-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-light);
+            font-size: 0.88rem;
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .comparison-table tr:hover td {
+            background: #f8f6f3;
+        }
+
+        /* ===== QUESTIONS SECTION ===== */
+        .questions-section {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 50px 40px;
+            margin-top: 40px;
+        }
+
+        .questions-section .section-header {
+            border-bottom-color: var(--accent);
+        }
+
+        .questions-section .section-title {
+            color: white;
+        }
+
+        .questions-section .section-number {
+            background: var(--accent);
+            color: var(--primary);
+        }
+
+        .question-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 22px;
+            margin-bottom: 18px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .question-card h4 {
+            color: var(--accent);
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+        }
+
+        .question-card ol {
+            padding-left: 22px;
+        }
+
+        .question-card li {
+            margin-bottom: 8px;
+            color: rgba(255,255,255,0.9);
+            font-size: 0.95rem;
+        }
+
+        .tag {
+            display: inline-block;
+            background: var(--secondary);
+            color: white;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-right: 6px;
+            margin-bottom: 4px;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            background: var(--primary);
+            color: var(--sidebar-text);
+            text-align: center;
+            padding: 25px;
+            font-size: 0.85rem;
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--sidebar-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-light);
+            border-radius: 4px;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 260px;
+            }
+            .main-content {
+                margin-left: 260px;
+            }
+            .section {
+                padding: 30px;
+            }
+            .hero h1 {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .img-large {
+                max-width: 100%;
+                max-height: 280px;
+            }
+            .img-medium {
+                max-width: 100%;
+                max-height: 200px;
+            }
+        }
+
+        .highlight-text {
+            background: linear-gradient(120deg, rgba(232,168,124,0.3) 0%, rgba(232,168,124,0.3) 100%);
+            background-repeat: no-repeat;
+            background-size: 100% 40%;
+            background-position: 0 88%;
+            padding: 0 4px;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Sub-headings inside cards */
+        .card h4 {
+            color: var(--primary);
+            margin: 18px 0 10px;
+            font-size: 1.05rem;
+        }
+
+        .card h4:first-of-type {
+            margin-top: 0;
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+
+    <!-- ===== SIDEBAR NAVIGATION ===== -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>🗺️ Map Work & Projection</h2>
+            <p>Final Exam Study Notes</p>
+        </div>
+        <ul class="nav-menu">
+            <li><a href="#hero" class="active">🏠 Cover Page</a></li>
+
+            <li class="topic-group">Syllabus Topics</li>
+            <li><a href="#geodesy">1. Basic Geodesy</a></li>
+            <li><a href="#coordinates">2. Coordinate Systems</a></li>
+            <li><a href="#projections">3. Projection Systems</a></li>
+            <li><a href="#datums">4. Geodetic Datums</a></li>
+            <li><a href="#map-elements">5. Map Elements & Types</a></li>
+
+            <li class="topic-group">Exam Prep</li>
+            <li><a href="#questions">📋 Important Questions</a></li>
+        </ul>
+    </nav>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="main-content">
+
+        <!-- ===== HERO / COVER ===== -->
+        <section class="hero" id="hero">
+            <div class="hero-content">
+                <h1>Map Work & Projection</h1>
+                <p class="subtitle">Comprehensive Study Notes for Final Examination</p>
+                <div class="badge">📚 Geodesy • Coordinates • Projections • Datums • Maps</div>
+            </div>
+        </section>
+
+        <!-- ===== SECTION 1: BASIC GEODESY ===== -->
+        <section class="section" id="geodesy">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <h2 class="section-title">Introduction to Basic Geodesy</h2>
+            </div>
+
+            <div class="card">
+                <h3>Historical Perspective</h3>
+                <p>Geodesy is the science of measuring and understanding Earth's geometric shape, orientation in space, and gravity field. The study of Earth's shape has fascinated humans for thousands of years.</p>
+
+                <div class="img-grid">
+                    <div class="img-card">
+                        <img src="flat_earth.png" alt="Flat Earth Concept">
+                        <div class="caption">Early belief: Flat Earth model</div>
+                    </div>
+                    <div class="img-card">
+                        <img src="shape_of_earth.png" alt="Shape of Earth">
+                        <div class="caption">Modern understanding: Oblate spheroid</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Aristotle's Proof (350 BC)</h3>
+                <p>Aristotle provided one of the earliest scientific proofs that Earth is round using <span class="highlight-text">lunar eclipse observations</span>:</p>
+                <ul>
+                    <li>During a lunar eclipse, Earth casts a shadow on the Moon</li>
+                    <li>The shadow is always <strong>circular</strong>, regardless of the eclipse's position</li>
+                    <li>Only a <strong>sphere</strong> always casts a circular shadow from every angle</li>
+                    <li>A flat disk would cast elliptical shadows at different angles</li>
+                </ul>
+                <img src="LUNAR_pic.png" alt="Lunar Eclipse Proof" class="img-medium">
+                <div class="info-box">
+                    <h4>💡 Key Point</h4>
+                    <p>Aristotle also observed that ships disappear hull-first when sailing away, and new stars appear when traveling south — both evidence of a curved Earth.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Eratosthenes' Earth Measurement (240 BC)</h3>
+                <p>Eratosthenes, a Greek mathematician, calculated Earth's circumference with remarkable accuracy:</p>
+                <ul>
+                    <li>He knew that at <strong>Syene (Aswan)</strong>, the Sun was directly overhead on the summer solstice</li>
+                    <li>In <strong>Alexandria</strong>, about 800 km north, the Sun cast a shadow at 7.2° angle</li>
+                    <li>7.2° is 1/50th of a full circle (360°)</li>
+                    <li>Therefore, Earth's circumference = 800 km × 50 = <strong>40,000 km</strong></li>
+                    <li>Modern value: ~40,075 km — incredibly close!</li>
+                </ul>
+                <img src="erathones_calculation.png" alt="Eratosthenes Calculation" class="img-medium">
+                <div class="info-box success">
+                    <h4>✨ Amazing Fact</h4>
+                    <p>Eratosthenes achieved this accuracy over 2,200 years ago with just a stick, a well, and basic geometry!</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Newton's Contribution</h3>
+                <p>Sir Isaac Newton proposed that Earth is not a perfect sphere but an <strong>oblate spheroid</strong> — flattened at the poles and bulging at the equator due to rotation.</p>
+                <img src="newton.png" alt="Newton's Earth Shape" class="img-small">
+                <div class="info-box">
+                    <h4>🌍 Why Earth is Oblate?</h4>
+                    <p>Earth's rotation creates centrifugal force that pushes material outward at the equator, making the equatorial radius (~6,378 km) slightly larger than the polar radius (~6,357 km).</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Shape and Size of Earth</h3>
+                <div class="two-col">
+                    <div>
+                        <h4>Geoid</h4>
+                        <p>The <strong>Geoid</strong> is Earth's true physical shape — an irregular surface determined by gravity. It follows mean sea level and accounts for mountains, valleys, and density variations.</p>
+                        <img src="geoid.png" alt="Geoid" class="img-inline">
+                    </div>
+                    <div>
+                        <h4>Reference Ellipsoid</h4>
+                        <p>A <strong>Reference Ellipsoid</strong> is a smooth mathematical model (flattened sphere) used for calculations. It approximates the geoid but is much simpler for mapping.</p>
+                        <img src="refrence_ellpsoid.png" alt="Reference Ellipsoid" class="img-inline">
+                    </div>
+                </div>
+                <table class="comparison-table">
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                    </tr>
+                    <tr>
+                        <td>Equatorial Radius</td>
+                        <td>6,378.137 km</td>
+                    </tr>
+                    <tr>
+                        <td>Polar Radius</td>
+                        <td>6,356.752 km</td>
+                    </tr>
+                    <tr>
+                        <td>Flattening</td>
+                        <td>1/298.257</td>
+                    </tr>
+                    <tr>
+                        <td>Surface Area</td>
+                        <td>510 million km²</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="card">
+                <h3>The Orange Peel Theory</h3>
+                <p>A classic analogy for understanding why flat maps distort: just as you cannot flatten an orange peel without tearing or stretching it, you cannot represent Earth's curved surface on a flat map without some distortion.</p>
+                <div class="img-grid">
+                    <div class="img-card">
+                        <img src="orange_peel.png" alt="Orange Peel Theory">
+                        <div class="caption">Orange peel analogy</div>
+                    </div>
+                    <div class="img-card">
+                        <img src="orange%20peel.png" alt="Orange Peel Flattening">
+                        <div class="caption">Flattening causes distortion</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECTION 2: COORDINATE SYSTEMS ===== -->
+        <section class="section" id="coordinates">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <h2 class="section-title">Introduction to Coordinate Systems</h2>
+            </div>
+
+            <div class="card">
+                <h3>Basic Coordinate Systems</h3>
+                <p>Coordinate systems provide a framework to define positions on Earth's surface. They are essential for mapping, navigation, and GIS applications.</p>
+                <img src="coordinate_comparison.png" alt="Coordinate Comparison" class="img-medium">
+            </div>
+
+            <div class="card">
+                <h3>Latitude and Longitude</h3>
+                <p>The most common global coordinate system uses angular measurements:</p>
+                <ul>
+                    <li><strong>Latitude:</strong> Angular distance north/south from the Equator (0° to 90° N/S)</li>
+                    <li><strong>Longitude:</strong> Angular distance east/west from the Prime Meridian (0° to 180° E/W)</li>
+                    <li>Lines of latitude are called <strong>parallels</strong></li>
+                    <li>Lines of longitude are called <strong>meridians</strong></li>
+                </ul>
+                <img src="lat-long.png" alt="Latitude and Longitude" class="img-medium">
+                <div class="info-box">
+                    <h4>📍 Prime Meridian</h4>
+                    <p>Passes through the Royal Observatory in Greenwich, London. Established in 1884 at the International Meridian Conference.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>ECEF (Earth-Centered Earth-Fixed)</h3>
+                <p>ECEF is a 3D Cartesian coordinate system with its origin at Earth's center of mass:</p>
+                <ul>
+                    <li><strong>X-axis:</strong> Points to the intersection of the Equator and Prime Meridian</li>
+                    <li><strong>Y-axis:</strong> 90° east of X-axis on the Equator</li>
+                    <li><strong>Z-axis:</strong> Points through the North Pole</li>
+                </ul>
+                <img src="Earth-Centered-Earth-Fixed-ECEF-Coordinate-System.png" alt="ECEF Coordinate System" class="img-medium">
+                <p>Used in GPS and satellite navigation because it provides precise 3D positioning without angular ambiguity.</p>
+            </div>
+
+            <div class="card">
+                <h3>UTM (Universal Transverse Mercator)</h3>
+                <p>UTM divides Earth into <strong>60 zones</strong>, each 6° of longitude wide:</p>
+                <ul>
+                    <li>Each zone has its own central meridian</li>
+                    <li>Coordinates are given in meters (Eastings and Northings)</li>
+                    <li>Easting is measured from the zone's central meridian (500,000m false easting)</li>
+                    <li>Northing is measured from the Equator</li>
+                    <li>Avoids the distortion problem of global projections</li>
+                </ul>
+                <img src="utm_pakistan.png" alt="UTM Zones Pakistan" class="img-medium">
+                <div class="info-box warning">
+                    <h4>⚠️ Important</h4>
+                    <p>Pakistan falls in UTM Zones 40, 41, and 42. Always mention the zone number with UTM coordinates!</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>GEOREF (World Geographic Reference System)</h3>
+                <p>A simple alphanumeric system for air navigation:</p>
+                <ul>
+                    <li>Uses 15° quadrangles identified by letters</li>
+                    <li>Further subdivided into 1° squares</li>
+                    <li>Easy to communicate over radio</li>
+                    <li>Less precise than UTM but simpler</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Universal Polar Stereographic (UPS)</h3>
+                <p>Used for areas above 84°N and below 80°S where UTM becomes impractical:</p>
+                <ul>
+                    <li>Two zones: North Pole and South Pole</li>
+                    <li>Based on Stereographic projection</li>
+                    <li>Scale factor at pole: 0.994</li>
+                </ul>
+                <img src="ups.png" alt="Universal Polar Stereographic" class="img-small">
+            </div>
+
+            <div class="card">
+                <h3>National Grid Systems</h3>
+                <p>Countries often use their own grid systems for detailed mapping:</p>
+                <div class="img-grid">
+                    <div class="img-card">
+                        <img src="britishnationalgrid.png" alt="British National Grid">
+                        <div class="caption">British National Grid (OSGB36)</div>
+                    </div>
+                    <div class="img-card">
+                        <img src="European%20Datum.png" alt="European Datum">
+                        <div class="caption">European Datum (ED50)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>State Plane Coordinates</h3>
+                <p>Used in the USA — each state has its own coordinate system:</p>
+                <ul>
+                    <li>Designed to minimize distortion within each state</li>
+                    <li>Uses Transverse Mercator or Lambert Conformal Conic projections</li>
+                    <li>More accurate than UTM for state-level work</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Miscellaneous Systems</h3>
+                <div class="two-col">
+                    <div>
+                        <h4>Postal Codes</h4>
+                        <p>Not a true coordinate system but used for location referencing. ZIP codes in USA, postcodes in UK and Pakistan.</p>
+                    </div>
+                    <div>
+                        <h4>Maidenhead Grid Squares</h4>
+                        <p>Used by amateur radio operators. Divides world into grid squares for easy location sharing.</p>
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <h4>Navigation Systems</h4>
+                    <p>GPS (Global Positioning System), GLONASS (Russia), Galileo (EU), BeiDou (China) — all use coordinate systems for satellite-based positioning.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECTION 3: PROJECTION SYSTEMS ===== -->
+        <section class="section" id="projections">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <h2 class="section-title">Projection Systems</h2>
+            </div>
+
+            <div class="card">
+                <h3>Introduction to Map Projections</h3>
+                <p>A map projection is a systematic transformation of the latitudes and longitudes of locations from the surface of a sphere or ellipsoid into locations on a plane. <strong>All projections distort something</strong> — the art is choosing which properties to preserve.</p>
+                <img src="all_simple_case_projection.png" alt="All Simple Case Projections" class="img-medium">
+                <div class="info-box">
+                    <h4>🎯 Projection Properties</h4>
+                    <p><strong>Conformal:</strong> Preserves angles (shapes locally)<br>
+                    <strong>Equal Area:</strong> Preserves area ratios<br>
+                    <strong>Equidistant:</strong> Preserves distances from center<br>
+                    <strong>Azimuthal:</strong> Preserves directions from center</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Cylindrical Projections</h3>
+                <p>Imagine wrapping a cylinder around Earth and projecting the surface onto it:</p>
+                <img src="cylinder_all_types.png" alt="Cylinder All Types" class="img-medium">
+
+                <h4>Simple Cylindrical</h4>
+                <p>The simplest projection where meridians and parallels are straight, equally spaced lines.</p>
+                <img src="simple_cylinder.png" alt="Simple Cylinder" class="img-small">
+
+                <h4>Mercator Projection</h4>
+                <p>Most famous cylindrical projection, developed by Gerardus Mercator in 1569:</p>
+                <ul>
+                    <li><strong>Conformal</strong> — preserves angles, useful for navigation</li>
+                    <li>Meridians are vertical, parallels are horizontal</li>
+                    <li>Scale increases toward poles (Greenland appears huge)</li>
+                    <li>Standard for nautical charts</li>
+                </ul>
+                <img src="mercatrovsequidistant.png" alt="Mercator vs Equidistant" class="img-medium">
+
+                <h4>Transverse Mercator</h4>
+                <p>Cylinder is turned sideways (transverse), touching along a meridian instead of the Equator:</p>
+                <ul>
+                    <li>Better for areas with north-south extent</li>
+                    <li>Used in UTM system</li>
+                    <li>Central meridian has true scale</li>
+                </ul>
+                <img src="transverde_mercator.png" alt="Transverse Mercator" class="img-medium">
+
+                <h4>Secant Cylinder Projections</h4>
+                <p>The cylinder cuts through the Earth (secant) rather than just touching (tangent):</p>
+                <ul>
+                    <li>Two standard parallels where scale is true</li>
+                    <li>Reduces overall distortion</li>
+                    <li>Used in many practical applications</li>
+                </ul>
+                <img src="secant_cylinder.png" alt="Secant Cylinder" class="img-small">
+                <img src="secan_all_case_projection.png" alt="Secant All Cases" class="img-medium">
+            </div>
+
+            <div class="card">
+                <h3>Conic Projections</h3>
+                <p>Imagine a cone placed over Earth, touching along a parallel:</p>
+                <img src="conic_all_types.gif" alt="Conic All Types" class="img-medium">
+
+                <h4>Simple Conic</h4>
+                <p>The cone touches Earth along one standard parallel:</p>
+                <ul>
+                    <li>Parallels are arcs of concentric circles</li>
+                    <li>Meridians are straight lines radiating from apex</li>
+                    <li>Good for mid-latitude regions</li>
+                </ul>
+                <img src="simple_conic_pic.png" alt="Simple Conic" class="img-small">
+
+                <h4>Secant Conic</h4>
+                <p>The cone cuts through Earth along two standard parallels:</p>
+                <ul>
+                    <li>Two standard parallels with true scale</li>
+                    <li>Less distortion between the parallels</li>
+                    <li>Most common conic projection in practice</li>
+                </ul>
+                <img src="conic_secant.png" alt="Conic Secant" class="img-small">
+                <div class="info-box success">
+                    <h4>✅ Best For</h4>
+                    <p>Conic projections are ideal for countries or regions that extend east-west in the mid-latitudes (e.g., USA, Russia, China).</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Azimuthal Projections</h3>
+                <p>Project Earth's surface onto a flat plane touching at a point:</p>
+                <img src="azimuthal_all_type.gif" alt="Azimuthal All Types" class="img-medium">
+
+                <h4>Simple (Tangent) Azimuthal</h4>
+                <p>The plane touches Earth at one point (usually a pole):</p>
+                <ul>
+                    <li>Parallels are concentric circles</li>
+                    <li>Meridians are straight lines radiating outward</li>
+                    <li>Preserves directions (azimuths) from center</li>
+                </ul>
+                <img src="simple_azimuthal.png" alt="Simple Azimuthal" class="img-small">
+
+                <h4>Secant Azimuthal</h4>
+                <p>The plane cuts through Earth:</p>
+                <ul>
+                    <li>Standard parallel is a circle of true scale</li>
+                    <li>Reduces overall distortion</li>
+                </ul>
+                <img src="secant_azimuthal.png" alt="Secant Azimuthal" class="img-small">
+
+                <div class="img-grid">
+                    <div class="img-card">
+                        <img src="azimuthal.png" alt="Azimuthal Projection">
+                        <div class="caption">Azimuthal projection from pole</div>
+                    </div>
+                </div>
+                <div class="info-box">
+                    <h4>🎯 Best For</h4>
+                    <p>Azimuthal projections are perfect for polar regions and situations where direction from a central point is important (e.g., air route planning).</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Miscellaneous Projections</h3>
+
+                <h4>Unprojected Maps</h4>
+                <p>These are not true projections but simply plot latitude and longitude as if they were x,y coordinates:</p>
+                <ul>
+                    <li>Also called Plate Carrée or Equirectangular</li>
+                    <li>Very simple but highly distorted</li>
+                    <li>Used for quick data visualization</li>
+                </ul>
+
+                <h4>Space Oblique Mercator</h4>
+                <p>A specialized projection for satellite imagery:</p>
+                <ul>
+                    <li>Follows the ground track of a satellite</li>
+                    <li>Minimizes distortion for Landsat images</li>
+                    <li>Very complex mathematically</li>
+                </ul>
+                <img src="sapce_oblique.png" alt="Space Oblique Mercator" class="img-medium">
+            </div>
+        </section>
+
+        <!-- ===== SECTION 4: GEODETIC DATUMS ===== -->
+        <section class="section" id="datums">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <h2 class="section-title">Geodetic Datums</h2>
+            </div>
+
+            <div class="card">
+                <h3>Introduction to Geodetic Datums</h3>
+                <p>A <strong>geodetic datum</strong> is a reference frame that defines the size and shape of Earth and the origin and orientation of coordinate systems. It is the foundation of all precise mapping and surveying.</p>
+                <img src="geodesy.png" alt="Geodesy" class="img-medium">
+                <div class="info-box">
+                    <h4>🔑 Datum = Ellipsoid + Origin + Orientation</h4>
+                    <p>A datum is not just the ellipsoid shape — it also includes where the ellipsoid is positioned relative to Earth's center and how it is oriented.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Geometric Models & Earth Surfaces</h3>
+                <div class="two-col">
+                    <div>
+                        <h4>Topographic Surface</h4>
+                        <p>The actual physical surface with mountains, valleys, and oceans.</p>
+                    </div>
+                    <div>
+                        <h4>Geoid</h4>
+                        <p>Equipotential surface of gravity, approximating mean sea level.</p>
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <h4>Reference Ellipsoid</h4>
+                    <p>Mathematical model — smooth, regular surface for calculations.</p>
+                </div>
+                <img src="datum_comprison.png" alt="Datum Comparison" class="img-medium">
+            </div>
+
+            <div class="card">
+                <h3>Types of Geodetic Datums</h3>
+                <div class="two-col">
+                    <div class="info-box">
+                        <h4>🌍 Global Datums</h4>
+                        <p>Centered at Earth's center of mass. Used for global applications like GPS.</p>
+                        <p><strong>Examples:</strong> WGS84, ITRF</p>
+                    </div>
+                    <div class="info-box warning">
+                        <h4>📍 Local Datums</h4>
+                        <p>Aligned to fit a specific region or country. Better accuracy for that area.</p>
+                        <p><strong>Examples:</strong> NAD27 (USA), OSGB36 (UK)</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Datums in Common Use</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <th>Datum</th>
+                        <th>Ellipsoid</th>
+                        <th>Type</th>
+                        <th>Primary Use</th>
+                    </tr>
+                    <tr>
+                        <td>WGS84</td>
+                        <td>WGS84</td>
+                        <td>Global</td>
+                        <td>GPS, Global mapping</td>
+                    </tr>
+                    <tr>
+                        <td>NAD83</td>
+                        <td>GRS80</td>
+                        <td>Regional</td>
+                        <td>North America</td>
+                    </tr>
+                    <tr>
+                        <td>ED50</td>
+                        <td>International 1924</td>
+                        <td>Regional</td>
+                        <td>Europe</td>
+                    </tr>
+                    <tr>
+                        <td>OSGB36</td>
+                        <td>Airy 1830</td>
+                        <td>Local</td>
+                        <td>Great Britain</td>
+                    </tr>
+                    <tr>
+                        <td>Tokyo Datum</td>
+                        <td>Bessel 1841</td>
+                        <td>Local</td>
+                        <td>Japan</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="card">
+                <h3>Datum Shifts and Conversions</h3>
+                <p>When data from different datums must be combined, a <strong>datum transformation</strong> is needed:</p>
+                <ul>
+                    <li><strong>Three-parameter shift:</strong> Simple X, Y, Z translation (least accurate)</li>
+                    <li><strong>Seven-parameter shift:</strong> Adds rotation and scale (more accurate)</li>
+                    <li><strong>Grid-based methods:</strong> Most accurate, uses interpolation between known points</li>
+                </ul>
+                <div class="info-box warning">
+                    <h4>⚠️ Important for Exam</h4>
+                    <p>Using the wrong datum can cause position errors of hundreds of meters! Always verify which datum your data uses.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECTION 5: MAP ELEMENTS & TYPES ===== -->
+        <section class="section" id="map-elements">
+            <div class="section-header">
+                <div class="section-number">5</div>
+                <h2 class="section-title">Map Elements & Map Types</h2>
+            </div>
+
+            <div class="card">
+                <h3>Essential Map Elements</h3>
+                <p>Every professional map must include these elements for proper interpretation:</p>
+                <ul>
+                    <li><strong>Title:</strong> Describes the map's subject and area</li>
+                    <li><strong>Legend:</strong> Explains symbols, colors, and patterns</li>
+                    <li><strong>Scale:</strong> Shows the ratio between map distance and real distance (graphic, verbal, or representative fraction)</li>
+                    <li><strong>North Arrow:</strong> Indicates orientation (True North, Magnetic North, Grid North)</li>
+                    <li><strong>Grid:</strong> Coordinate system lines for position reference</li>
+                    <li><strong>Projection Name:</strong> Identifies the projection used</li>
+                    <li><strong>Datum:</strong> Specifies the reference datum</li>
+                    <li><strong>Date:</strong> When the map was made or data collected</li>
+                    <li><strong>Author/Source:</strong> Who created the map</li>
+                    <li><strong>Neatline:</strong> Border framing the mapped area</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Types of Maps</h3>
+                <div class="two-col">
+                    <div>
+                        <h4>General Reference Maps</h4>
+                        <p>Show a variety of features — roads, rivers, cities, boundaries. Example: Topographic maps, Atlas maps.</p>
+                    </div>
+                    <div>
+                        <h4>Thematic Maps</h4>
+                        <p>Focus on a specific theme or topic. Example: Climate maps, population density maps, soil maps.</p>
+                    </div>
+                </div>
+                <div class="two-col" style="margin-top: 15px;">
+                    <div>
+                        <h4>Topographic Maps</h4>
+                        <p>Show elevation through contour lines. Essential for engineering and outdoor activities.</p>
+                    </div>
+                    <div>
+                        <h4>Cadastral Maps</h4>
+                        <p>Show property boundaries and land ownership. Used in legal and real estate matters.</p>
+                    </div>
+                </div>
+                <div class="two-col" style="margin-top: 15px;">
+                    <div>
+                        <h4>Navigation Charts</h4>
+                        <p>Designed for maritime or air navigation. Include depth soundings, hazards, airways.</p>
+                    </div>
+                    <div>
+                        <h4>Planimetric Maps</h4>
+                        <p>Show horizontal positions only, without elevation data. Used in urban planning.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Map Scale</h3>
+                <p>Scale represents the relationship between distance on the map and distance on the ground:</p>
+                <ul>
+                    <li><strong>Large Scale:</strong> 1:10,000 or larger — shows small areas with great detail</li>
+                    <li><strong>Medium Scale:</strong> 1:10,000 to 1:500,000 — moderate detail</li>
+                    <li><strong>Small Scale:</strong> 1:500,000 or smaller — shows large areas with less detail</li>
+                </ul>
+                <div class="info-box">
+                    <h4>💡 Memory Trick</h4>
+                    <p>"Large scale = Large detail, Small area" — The fraction 1/10,000 is a larger number than 1/1,000,000, so it shows more detail.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Map Symbols and Colors</h3>
+                <p>Standard cartographic conventions:</p>
+                <ul>
+                    <li><strong>Blue:</strong> Water (rivers, lakes, oceans)</li>
+                    <li><strong>Green:</strong> Vegetation, forests, parks</li>
+                    <li><strong>Brown:</strong> Contour lines, elevation</li>
+                    <li><strong>Black:</strong> Man-made features, boundaries, names</li>
+                    <li><strong>Red:</strong> Major roads, important features</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ===== IMPORTANT QUESTIONS SECTION ===== -->
+        <section class="questions-section" id="questions">
+            <div class="section" style="max-width: 1100px; margin: 0 auto; padding: 0;">
+                <div class="section-header">
+                    <div class="section-number">Q</div>
+                    <h2 class="section-title">Important Exam Questions</h2>
+                </div>
+
+                <div class="question-card">
+                    <h4>📋 Short Questions (2-5 Marks)</h4>
+                    <ol>
+                        <li>What is Geodesy? Write a brief history of its development.</li>
+                        <li>How did Aristotle prove that Earth is round using lunar eclipse?</li>
+                        <li>Explain Eratosthenes' method of calculating Earth's circumference.</li>
+                        <li>Differentiate between Geoid and Reference Ellipsoid.</li>
+                        <li>What is the Orange Peel Theory in map projection?</li>
+                        <li>Define Latitude and Longitude with a diagram.</li>
+                        <li>What is ECEF coordinate system? Explain its axes.</li>
+                        <li>Write a note on UTM coordinate system.</li>
+                        <li>What is UPS and when is it used?</li>
+                        <li>Define map projection and explain why all projections distort.</li>
+                        <li>What is a Geodetic Datum? Why is it important?</li>
+                        <li>Differentiate between Global and Local datums with examples.</li>
+                        <li>What is datum shift? Why is it necessary?</li>
+                        <li>List the essential elements of a map.</li>
+                        <li>What is the difference between large scale and small scale maps?</li>
+                        <li>Explain the concept of True North, Magnetic North, and Grid North.</li>
+                        <li>What is a secant projection? How does it differ from a tangent projection?</li>
+                        <li>Write a note on Space Oblique Mercator projection.</li>
+                        <li>What is GEOREF system?</li>
+                        <li>Explain the British National Grid system.</li>
+                    </ol>
+                </div>
+
+                <div class="question-card">
+                    <h4>📝 Long Questions (10-15 Marks)</h4>
+                    <ol>
+                        <li>
+                            <span class="tag">Geodesy</span>
+                            Discuss the historical development of Geodesy from ancient Greek scholars to modern times. Explain Aristotle's lunar eclipse proof and Eratosthenes' calculation method with diagrams.
+                        </li>
+                        <li>
+                            <span class="tag">Coordinate Systems</span>
+                            Explain different types of coordinate systems used in mapping. Compare and contrast Geographic (Lat-Long), UTM, ECEF, and UPS systems with their applications.
+                        </li>
+                        <li>
+                            <span class="tag">Projections</span>
+                            Classify map projections based on their geometric surface of projection. Explain Cylindrical, Conic, and Azimuthal projections with diagrams, giving examples of each type.
+                        </li>
+                        <li>
+                            <span class="tag">Projections</span>
+                            Compare tangent and secant projections. Explain with diagrams how secant projections reduce distortion. Discuss secant cases for cylindrical, conic, and azimuthal projections.
+                        </li>
+                        <li>
+                            <span class="tag">Mercator</span>
+                            Explain the Mercator projection in detail. Discuss its properties, advantages, disadvantages, and why it is widely used for navigation. Compare it with Transverse Mercator.
+                        </li>
+                        <li>
+                            <span class="tag">Datums</span>
+                            What is a Geodetic Datum? Explain its components (ellipsoid, origin, orientation). Discuss different types of datums with examples. Explain datum transformation and its importance.
+                        </li>
+                        <li>
+                            <span class="tag">Map Elements</span>
+                            Describe the essential elements of a map. Explain the importance of each element. Discuss different types of maps and their specific uses.
+                        </li>
+                        <li>
+                            <span class="tag">Miscellaneous</span>
+                            Write detailed notes on: (a) National Grid Systems (b) State Plane Coordinates (c) Maidenhead Grid Squares (d) Navigation systems and their coordinate requirements.
+                        </li>
+                        <li>
+                            <span class="tag">Comprehensive</span>
+                            Explain the complete workflow from field data collection to final map production, mentioning the role of geodesy, coordinate systems, projections, and datums at each stage.
+                        </li>
+                        <li>
+                            <span class="tag">Comparison</span>
+                            Compare WGS84 with local datums. Why is WGS84 considered a global datum? Discuss the problems that arise when combining data from different datums and how they are solved.
+                        </li>
+                    </ol>
+                </div>
+
+                <div class="question-card">
+                    <h4>🎯 Diagram-Based Questions</h4>
+                    <ol>
+                        <li>Draw and label the following with all components:
+                            <ul style="margin-top: 8px; margin-left: 20px;">
+                                <li>Lat-Long coordinate system on a globe</li>
+                                <li>ECEF coordinate system showing X, Y, Z axes</li>
+                                <li>UTM zone division of the world</li>
+                                <li>Simple cylindrical projection development</li>
+                                <li>Simple conic projection development</li>
+                                <li>Simple azimuthal projection from the pole</li>
+                                <li>Secant vs Tangent cylinder</li>
+                                <li>Geoid vs Ellipsoid cross-section</li>
+                                <li>Eratosthenes' calculation geometry</li>
+                                <li>Lunar eclipse shadow proof</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== FOOTER ===== -->
+        <footer class="footer">
+            <p>🗺️ Map Work & Projection — Final Exam Study Notes</p>
+            <p style="margin-top: 8px; opacity: 0.7;">Good luck with your exams! 📚✨</p>
+        </footer>
+
+    </main>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('.nav-menu a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetSection = document.querySelector(targetId);
+                if (targetSection) {
+                    targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+
+                // Update active state
+                document.querySelectorAll('.nav-menu a').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Update active nav on scroll
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section[id]');
+            const scrollPos = window.scrollY + 100;
+
+            sections.forEach(section => {
+                const top = section.offsetTop;
+                const height = section.offsetHeight;
+                const id = section.getAttribute('id');
+
+                if (scrollPos >= top && scrollPos < top + height) {
+                    document.querySelectorAll('.nav-menu a').forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === '#' + id) {
+                            link.classList.add('active');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
